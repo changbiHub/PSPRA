@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import sklearn.metrics
-import utls
 from preprocessor import *
 import os
 import argparse
@@ -14,7 +13,7 @@ parser.add_argument('--model_name', type=str, default="TCN",
                     help='Model name to use (e.g., "TCN", "RNN")')
 parser.add_argument('--result_path', type=str, default="../results",
                     help='Path to save results')
-parser.add_argument('--model_save_path', type=str, default=None,
+parser.add_argument('--model_save_path', type=str, default="../models",
                     help='Path to save trained models')
 parser.add_argument('--overwrite', action='store_true',
                     help='Whether to overwrite existing results')
@@ -32,7 +31,7 @@ if experiment == "p3m":
     multivariate_data_path = os.path.join(script_path, os.pardir, "data", f"timeSeries_PSP_full_{PV}.csv")
     df = pd.read_csv(multivariate_data_path)[["site","JD","component","value"]]
     df_pivot = pd.pivot_table(df,index=["site","JD"],columns="component",values="value").reset_index().dropna()
-    df_pivot = utls.phrase(df_pivot)
+    df_pivot = phrase(df_pivot)
     df_pivot = df_pivot[df_pivot.year>2012]
     data_toxins = df_pivot.loc[:,df_pivot.columns!="PSP-Total"]
     data_total = df_pivot[["site","JD","PSP-Total","year"]]
@@ -62,7 +61,7 @@ else:
     timeSeries_df = list()
     for province in pv_ls:
         univariate_data_path = os.path.join(script_path, os.pardir, "data", f"timeSeries_PSP_{province}.csv")
-        timeSeries_p = utls.read_and_phrase(univariate_data_path)
+        timeSeries_p = read_and_phrase(univariate_data_path)
         timeSeries_p["province"] = province
         timeSeries_df.append(timeSeries_p)
     timeSeries_df = pd.concat(timeSeries_df)

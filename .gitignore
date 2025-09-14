@@ -1,1 +1,8 @@
 /data
+/.venv
+/script/logs
+/script/__pycache__
+/script/catboost_info
+/.vscode
+/models
+/results
