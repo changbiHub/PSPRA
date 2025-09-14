@@ -300,3 +300,25 @@ class NNmodel(BaseEstimator, ClassifierMixin):
         self.classes_ = None
         
         return self
+    
+# Simple transformer to reshape data for neural networks
+class ReshapeTransformer(BaseEstimator, TransformerMixin):
+    def __init__(self, time_steps, num_features):
+        self.time_steps = time_steps
+        self.num_features = num_features
+        
+    def fit(self, X, y=None):
+        return self
+        
+    def transform(self, X):
+        if len(X.shape) == 2:
+            return X.reshape(X.shape[0], self.time_steps, self.num_features)
+        return X
+        
+    def get_params(self, deep=True):
+        return {'time_steps': self.time_steps, 'num_features': self.num_features}
+        
+    def set_params(self, **params):
+        for key, value in params.items():
+            setattr(self, key, value)
+        return self

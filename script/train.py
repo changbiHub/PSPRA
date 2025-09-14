@@ -107,7 +107,90 @@ y_pred = None
 y_pred_proba_train = None
 y_pred_train = None
 
-if model_name in ["RNN","TCN"]:
+if model_name == "stacking_ensemble":
+    from sklearn.ensemble import StackingClassifier
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier, AdaBoostClassifier, ExtraTreesClassifier
+    from sklearn.tree import DecisionTreeClassifier
+    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
+    from sklearn.naive_bayes import GaussianNB
+    from sklearn.neighbors import KNeighborsClassifier
+    from lightgbm import LGBMClassifier
+    from xgboost import XGBClassifier
+    from catboost import CatBoostClassifier
+    from nnModel import NNmodel, ReshapeTransformer
+    from sklearn.pipeline import Pipeline
+    
+    # Prepare data - flatten for traditional ML models
+    if experiment == "p3m":
+        X_train_flat = X_train.reshape(X_train.shape[0], -1)
+        X_test_flat = X_test.reshape(X_test.shape[0], -1)
+        num_features = X_train.shape[2]
+        time_steps = X_train.shape[1]
+    else:
+        X_train_flat = X_train
+        X_test_flat = X_test
+        num_features = 1
+        time_steps = X_train.shape[1]
+    
+    # Define all base estimators including neural networks in pipelines
+    base_estimators = [
+        ('gbc', GradientBoostingClassifier()),
+        ('rf', RandomForestClassifier()),
+        ('lr', LogisticRegression(max_iter=1000)),
+        ('dt', DecisionTreeClassifier()),
+        ('catboost', CatBoostClassifier(verbose=0)),
+        ('ada', AdaBoostClassifier()),
+        ('lda', LinearDiscriminantAnalysis()),
+        ('et', ExtraTreesClassifier()),
+        ('lgb', LGBMClassifier(verbose=-1)),
+        ('qda', QuadraticDiscriminantAnalysis()),
+        ('nb', GaussianNB()),
+        ('xgb', XGBClassifier(use_label_encoder=False, eval_metric="logloss", verbosity=0)),
+        ('knn', KNeighborsClassifier()),
+        ('tcn', Pipeline([
+            ('reshape', ReshapeTransformer(time_steps=time_steps, num_features=num_features)),
+            ('model', NNmodel(time_steps=time_steps, num_features=num_features, model_name="TCN", 
+                             best_model_filepath=f"temp_tcn_{timestamp}.keras"))
+        ])),
+        ('rnn', Pipeline([
+            ('reshape', ReshapeTransformer(time_steps=time_steps, num_features=num_features)),
+            ('model', NNmodel(time_steps=time_steps, num_features=num_features, model_name="RNN", 
+                             best_model_filepath=f"temp_rnn_{timestamp}.keras"))
+        ]))
+    ]
+    
+    # Create stacking classifier
+    model = StackingClassifier(
+        estimators=base_estimators,
+        final_estimator=LogisticRegression(max_iter=1000),
+        cv=5
+    )
+    
+    print("Training stacking ensemble with all models...")
+    # Train the stacking ensemble - use flattened data
+    model.fit(X_train_flat, y_train)
+    
+    # Make predictions
+    y_pred_proba = model.predict_proba(X_test_flat)[:, 1]
+    y_pred = model.predict(X_test_flat)
+    y_pred_proba_train = model.predict_proba(X_train_flat)[:, 1]
+    y_pred_train = model.predict(X_train_flat)
+    
+    # Save model
+    if args.model_save_path is not None:
+        if not args.overwrite:
+            save_path = os.path.join(args.model_save_path, experiment, model_name, f"model_{timestamp}.joblib")
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            joblib.dump(model, save_path)
+            print(f"Stacking ensemble saved to {save_path}")
+        else:
+            save_path = os.path.join(args.model_save_path, experiment, model_name, f"model.joblib")
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            joblib.dump(model, save_path)
+            print(f"Stacking ensemble saved to {save_path}")
+
+elif model_name in ["RNN","TCN"]:
     X_train = X_train.astype(np.float32)
     X_test = X_test.astype(np.float32)
     y_train = y_train.astype(int)
