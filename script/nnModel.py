@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.keras import Input, layers, Model
 from tcn import TCN
 from sklearn.utils import class_weight
-from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.base import BaseEstimator, ClassifierMixin, TransformerMixin
 from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
 import numpy as np
 from sklearn.metrics import roc_curve
