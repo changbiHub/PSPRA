@@ -127,16 +127,16 @@ if model_name in ["RNN","TCN"]:
     if experiment == "p3m":
         model = NNmodel(time_steps=X_train.shape[1], num_features=X_train.shape[2], model_name=model_name, best_model_filepath=model_save_filepath)
         model.fit(X_train, y_train, epochs=200, batch_size=32, validation_split=0.1)
-        y_pred_proba = model.predict_proba(X_test)
+        y_pred_proba = model.predict_proba(X_test)[:, 1]
         y_pred = model.predict(X_test)
-        y_pred_proba_train = model.predict_proba(X_train)
+        y_pred_proba_train = model.predict_proba(X_train)[:, 1]
         y_pred_train = model.predict(X_train)
     else:
         model = NNmodel(time_steps=X_train.shape[1], model_name=model_name, best_model_filepath=model_save_filepath)
         model.fit(X_train.reshape(-1,X_train.shape[1],1), y_train, epochs=200, batch_size=32, validation_split=0.1)
-        y_pred_proba = model.predict_proba(X_test.reshape(-1,X_test.shape[1],1))
+        y_pred_proba = model.predict_proba(X_test.reshape(-1,X_test.shape[1],1))[:, 1]
         y_pred = model.predict(X_test.reshape(-1,X_test.shape[1],1))
-        y_pred_proba_train = model.predict_proba(X_train.reshape(-1,X_train.shape[1],1))
+        y_pred_proba_train = model.predict_proba(X_train.reshape(-1,X_train.shape[1],1))[:, 1]
         y_pred_train = model.predict(X_train.reshape(-1,X_train.shape[1],1))
 
 if model_name in ["GBC","RF","LR","DT","LR","catboost","ADA","LDA","ET","LGB","QDA","NB","XGB","KNN"]:
