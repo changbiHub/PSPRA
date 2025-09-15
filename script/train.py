@@ -29,8 +29,8 @@ if experiment == "p3m":
     PV = "BC"
     th_val = 80
     multivariate_data_path = os.path.join(script_path, os.pardir, "data", f"timeSeries_PSP_full_{PV}.csv")
-    df = pd.read_csv(multivariate_data_path)[["site","JD","component","value"]]
-    df_pivot = pd.pivot_table(df,index=["site","JD"],columns="component",values="value").reset_index().dropna()
+    df = pd.read_csv(multivariate_data_path)[["site","JD","compound","value"]]
+    df_pivot = pd.pivot_table(df,index=["site","JD"],columns="compound",values="value").reset_index().dropna()
     df_pivot = phrase(df_pivot)
     df_pivot = df_pivot[df_pivot.year>2012]
     data_toxins = df_pivot.loc[:,df_pivot.columns!="PSP-Total"]
@@ -77,7 +77,6 @@ else:
         train_year = set(range(2001,2011))
         test_year = set(range(2013,2021))
         timeSeries_df["value_valeur"] = timeSeries_df.value_valeur.clip(40,None)
-        timeSeries_df["value_log"] = timeSeries_df.value_log.clip(np.log10(40+1),None)
         risk_th = 80
 
     if experiment=="p3":
@@ -163,7 +162,7 @@ if model_name == "stacking_ensemble":
     # Create stacking classifier
     model = StackingClassifier(
         estimators=base_estimators,
-        final_estimator=LogisticRegression(max_iter=1000, penalty='elasticnet'),
+        final_estimator=LogisticRegression(max_iter=1000, penalty='elasticnet', solver='saga', l1_ratio=0.5),
         cv=5
     )
     
