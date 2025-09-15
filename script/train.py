@@ -26,16 +26,16 @@ timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
 # %%
 # Handle multivariate experiment (p3m)
 if experiment == "p3m":
-    PV = "BC"
     th_val = 80
-    multivariate_data_path = os.path.join(script_path, os.pardir, "data", f"timeSeries_PSP_full_{PV}.csv")
-    df = pd.read_csv(multivariate_data_path)[["site","JD","compound","value"]]
-    df_pivot = pd.pivot_table(df,index=["site","JD"],columns="compound",values="value").reset_index().dropna()
+    toxin_names = ['C-1', 'C-2', 'GTX-1', 'GTX-2', 'GTX-3', 'GTX-4','GTX-5', 'NEOSTX', 'STX', 'dcGTX-2', 'dcGTX-3', 'dcSTX']
+    multivariate_data_path = os.path.join(script_path, os.pardir, "data", f"timeSeries_PSP_full_BC.csv")
+    df = pd.read_csv(multivariate_data_path)[["site","date","compound","value"]]
+    df_pivot = pd.pivot_table(df,index=["site","date"],columns="compound",values="value").reset_index().dropna()
     df_pivot = phrase(df_pivot)
     df_pivot = df_pivot[df_pivot.year>2012]
     data_toxins = df_pivot.loc[:,df_pivot.columns!="PSP-Total"]
-    data_total = df_pivot[["site","JD","PSP-Total","year"]]
-    data_total["PSP-Total-Cal"] = data_toxins.iloc[:,2:14].sum(axis=1)*100
+    data_total = df_pivot[["site","date","PSP-Total","year"]]
+    data_total["PSP-Total-Cal"] = data_toxins[toxin_names].sum(axis=1)*100
     data_toxins["PSP_total"] = data_total["PSP-Total-Cal"]
     data_toxins["risk_flag"] = 0
     data_toxins.loc[data_toxins.PSP_total>th_val,"risk_flag"] = 1
@@ -57,14 +57,8 @@ if experiment == "p3m":
     
 else:
     # Handle univariate experiments (p1, p2, p3)
-    pv_ls = ["BC"]
-    timeSeries_df = list()
-    for province in pv_ls:
-        univariate_data_path = os.path.join(script_path, os.pardir, "data", f"timeSeries_PSP_{province}.csv")
-        timeSeries_p = read_and_phrase(univariate_data_path)
-        timeSeries_p["province"] = province
-        timeSeries_df.append(timeSeries_p)
-    timeSeries_df = pd.concat(timeSeries_df)
+    univariate_data_path = os.path.join(script_path, os.pardir, "data", f"timeSeries_PSP_BC.csv")
+    timeSeries_df = read_and_phrase(univariate_data_path)
 
     if experiment=="p1":
         all_year = set([2013,2014,2015,2016,2017,2018,2019,2020])
@@ -221,7 +215,7 @@ elif model_name in ["RNN","TCN"]:
         y_pred_proba_train = model.predict_proba(X_train.reshape(-1,X_train.shape[1],1))[:, 1]
         y_pred_train = model.predict(X_train.reshape(-1,X_train.shape[1],1))
 
-if model_name in ["GBC","RF","LR","DT","LR","catboost","ADA","LDA","ET","LGB","QDA","NB","XGB","KNN"]:
+elif model_name in ["GBC","RF","LR","DT","LR","catboost","ADA","LDA","ET","LGB","QDA","NB","XGB","KNN"]:
     
     # For multivariate experiment, flatten the input
     if experiment == "p3m":
@@ -290,6 +284,8 @@ if model_name in ["GBC","RF","LR","DT","LR","catboost","ADA","LDA","ET","LGB","Q
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             joblib.dump(model, save_path)
             print(f"Model saved to {save_path}")
+else:
+    raise ValueError(f"Model {model_name} not recognized.")
 
 auc = sklearn.metrics.roc_auc_score(y_test, y_pred_proba)
 print(f"AUC: {auc}")
