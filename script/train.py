@@ -163,7 +163,7 @@ if model_name == "stacking_ensemble":
     # Create stacking classifier
     model = StackingClassifier(
         estimators=base_estimators,
-        final_estimator=LogisticRegression(max_iter=1000),
+        final_estimator=LogisticRegression(max_iter=1000, penalty='elasticnet'),
         cv=5
     )
     
