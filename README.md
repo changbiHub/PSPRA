@@ -15,7 +15,7 @@ PSPRA/
 │   ├── train.py          # Main training script
 │   ├── nnModel.py        # Neural network model implementations
 │   └── preprocessor.py   # Data preprocessing utilities
-├── data/                 # Synthetic datasets (not included)
+├── data/                 # Synthetic datasets
 ├── results/              # Training results and predictions
 └── models/               # Saved trained models
 ```
@@ -50,11 +50,6 @@ pip install lightgbm xgboost catboost
 
 # Additional utilities
 pip install joblib scipy
-```
-
-Alternative installation using requirements.txt (if available):
-```bash
-pip install -r requirements.txt
 ```
 
 ## Usage
