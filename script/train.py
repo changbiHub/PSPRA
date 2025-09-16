@@ -11,9 +11,9 @@ parser.add_argument('--experiment', type=str, default="p1",
                     help='Experiment identifier (e.g., "p1", "p2", "p3", "p3m")')
 parser.add_argument('--model_name', type=str, default="TCN",
                     help='Model name to use (e.g., "TCN", "RNN")')
-parser.add_argument('--result_path', type=str, default="../results",
+parser.add_argument('--result_path', type=str, default=None,
                     help='Path to save results')
-parser.add_argument('--model_save_path', type=str, default="../models",
+parser.add_argument('--model_save_path', type=str, default=None,
                     help='Path to save trained models')
 parser.add_argument('--overwrite', action='store_true',
                     help='Whether to overwrite existing results')
@@ -21,6 +21,13 @@ args = parser.parse_args()
 experiment = args.experiment
 model_name = args.model_name
 script_path = os.path.dirname(os.path.abspath(__file__))
+
+# Set default paths relative to script directory if not provided
+if args.result_path is None:
+    args.result_path = os.path.join(script_path, "..", "results")
+if args.model_save_path is None:
+    args.model_save_path = os.path.join(script_path, "..", "models")
+
 timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
 
 # %%
