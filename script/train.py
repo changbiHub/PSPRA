@@ -11,6 +11,8 @@ parser.add_argument('--experiment', type=str, default="p1",
                     help='Experiment identifier (e.g., "p1", "p2", "p3", "p3m")')
 parser.add_argument('--model_name', type=str, default="TCN",
                     help='Model name to use (e.g., "TCN", "RNN")')
+parser.add_argument('--data_path', type=str, default=None,
+                    help='Path to the dataset (if None, defaults will be used)')
 parser.add_argument('--result_path', type=str, default=None,
                     help='Path to save results')
 parser.add_argument('--model_save_path', type=str, default=None,
@@ -27,6 +29,8 @@ if args.result_path is None:
     args.result_path = os.path.join(script_path, "..", "results")
 if args.model_save_path is None:
     args.model_save_path = os.path.join(script_path, "..", "models")
+if args.data_path is None:
+    args.data_path = os.path.join(script_path, "..", "data")
 
 timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
 
@@ -35,13 +39,13 @@ timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
 if experiment == "p3m":
     th_val = 80
     toxin_names = ['C-1', 'C-2', 'GTX-1', 'GTX-2', 'GTX-3', 'GTX-4','GTX-5', 'NEOSTX', 'STX', 'dcGTX-2', 'dcGTX-3', 'dcSTX']
-    multivariate_data_path = os.path.join(script_path, os.pardir, "data", f"PSP_BC_multivariate.csv")
+    multivariate_data_path = os.path.join(args.data_path, f"data_mutivariate.csv")
     df = pd.read_csv(multivariate_data_path)[["site","date","compound","value"]]
     df_pivot = pd.pivot_table(df,index=["site","date"],columns="compound",values="value").reset_index().dropna()
     df_pivot = phrase(df_pivot)
     df_pivot = df_pivot[df_pivot.year>2012]
     data_toxins = df_pivot.loc[:,df_pivot.columns!="PSP-Total"]
-    data_total = df_pivot[["site","date","PSP-Total","year"]]
+    data_total = df_pivot[["site","date","year"]]
     data_total["PSP-Total-Cal"] = data_toxins[toxin_names].sum(axis=1)*100
     data_toxins["PSP_total"] = data_total["PSP-Total-Cal"]
     data_toxins["risk_flag"] = 0
@@ -64,7 +68,7 @@ if experiment == "p3m":
     
 else:
     # Handle univariate experiments (p1, p2, p3)
-    univariate_data_path = os.path.join(script_path, os.pardir, "data", f"PSP_BC_univariate.csv")
+    univariate_data_path = os.path.join(args.data_path, f"data_univariate.csv")
     df = pd.read_csv(univariate_data_path)
     timeSeries_df = phrase(df)
 
@@ -83,7 +87,7 @@ else:
         all_year = set(np.unique(timeSeries_df.year))
         train_year = set(range(2001,2011))
         test_year = set(range(2013,2021))
-        timeSeries_df["value_valeur"] = timeSeries_df.value_valeur.clip(40,None)
+        timeSeries_df["value"] = timeSeries_df.value.clip(40,None)
         risk_th = 80
 
     if experiment=="p3":
