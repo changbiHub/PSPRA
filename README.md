@@ -215,11 +215,11 @@ model = joblib.load('models/p1/RF/model_20240101_120000.joblib')
 The code expects data files in the following format:
 
 ### Univariate Data (p1, p2, p3)
-- File: `data/PSP_BC_univariate.csv`
+- File: `data/data_univariate.csv`
 - Required columns: `site`, `date`, `value`, plus other metadata
 
 ### Multivariate Data (p3m)
-- File: `data/PSP_BC_multivariate.csv`  
+- File: `data/data_multivariate.csv`  
 - Required columns: `site`, `date`, `compound`, `value`
 
 ## Citation
