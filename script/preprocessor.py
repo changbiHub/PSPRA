@@ -1,36 +1,12 @@
 import numpy as np
 import pandas as pd
-from astropy.time import Time
-import datetime
 from scipy.interpolate import interp1d
 
-def jd2week(x):
-    dt = Time(x, format="jd").ymdhms
-    return datetime.date(dt["year"],dt["month"],dt["day"]).isocalendar()[1]
-def jd2doy(x):
-    dt = Time(x, format="jd").ymdhms
-    return datetime.date(dt["year"],dt["month"],dt["day"]).timetuple().tm_yday
-
-def intv_union(data):
-    """ Union of a list of intervals e.g. [(1,2),(3,4)] """
-    intervals = [Interval(begin, end) for (begin, end) in data]
-    u = Union(*intervals)
-    return u
-
-def read_and_phrase(fileName):
-    timeSeries_df = pd.read_csv(fileName).iloc[:,1:]
-    timeSeries_df["month"] = timeSeries_df.JD.apply(lambda x: Time(x, format="jd").ymdhms["month"])
-    timeSeries_df["year"] = timeSeries_df.JD.apply(lambda x: Time(x, format="jd").ymdhms["year"])
-    timeSeries_df["week"] = timeSeries_df.JD.apply(lambda x: jd2week(x))
-    timeSeries_df["yday"] = timeSeries_df.JD.apply(lambda x: jd2doy(x))
-    timeSeries_df["week_num"] = (timeSeries_df.JD-timeSeries_df.JD.min())//7
-    return timeSeries_df
 
 def phrase(df):
-    df["year"] = pd.DatetimeIndex(pd.to_datetime(df.JD, unit='D',origin='julian')).year
-    df["month"] = pd.DatetimeIndex(pd.to_datetime(df.JD, unit='D',origin='julian')).month
-    df["week"] = pd.to_datetime(df.JD, unit='D', origin='julian').dt.isocalendar().week
-    df["yday"] = pd.DatetimeIndex(pd.to_datetime(df.JD, unit='D',origin='julian')).dayofyear
+    df["date"] = pd.to_datetime(df["date"])
+    df["year"] = df["date"].dt.year
+    df["JD"] = (df["date"] - pd.Timestamp("1970-01-01")) / pd.Timedelta(days=1) + 2440587.5
     return df
 
 def preprocessor(data_df, mode='univariate', max_gap=21, interp_kind='linear'):
@@ -59,9 +35,8 @@ def preprocessor(data_df, mode='univariate', max_gap=21, interp_kind='linear'):
     X_query = np.arange(-70, -7)    
     # Mode-specific configuration
     if mode == 'univariate':
-        baseline_col = 'value_valeur'
-        # target_col = 'value_log'
-        target_col = 'value_valeur'
+        baseline_col = 'value'
+        target_col = 'value'
     elif mode == 'multivariate':
         baseline_col = 'PSP_total'
         target_col = None  # Multiple columns

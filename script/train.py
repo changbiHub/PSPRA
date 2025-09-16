@@ -28,7 +28,7 @@ timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
 if experiment == "p3m":
     th_val = 80
     toxin_names = ['C-1', 'C-2', 'GTX-1', 'GTX-2', 'GTX-3', 'GTX-4','GTX-5', 'NEOSTX', 'STX', 'dcGTX-2', 'dcGTX-3', 'dcSTX']
-    multivariate_data_path = os.path.join(script_path, os.pardir, "data", f"timeSeries_PSP_full_BC.csv")
+    multivariate_data_path = os.path.join(script_path, os.pardir, "data", f"PSP_BC_multivariate.csv")
     df = pd.read_csv(multivariate_data_path)[["site","date","compound","value"]]
     df_pivot = pd.pivot_table(df,index=["site","date"],columns="compound",values="value").reset_index().dropna()
     df_pivot = phrase(df_pivot)
@@ -57,8 +57,14 @@ if experiment == "p3m":
     
 else:
     # Handle univariate experiments (p1, p2, p3)
-    univariate_data_path = os.path.join(script_path, os.pardir, "data", f"timeSeries_PSP_BC.csv")
-    timeSeries_df = read_and_phrase(univariate_data_path)
+    univariate_data_path = os.path.join(script_path, os.pardir, "data", f"PSP_BC_univariate.csv")
+    df = pd.read_csv(univariate_data_path)
+    timeSeries_df = phrase(df)
+
+    all_year = None
+    train_year = None
+    test_year = None
+    risk_th = None
 
     if experiment=="p1":
         all_year = set([2013,2014,2015,2016,2017,2018,2019,2020])
@@ -81,7 +87,7 @@ else:
 
     timeSeries_df = timeSeries_df[timeSeries_df.year.isin(all_year)]
     timeSeries_df["risk_flag"] = 0
-    timeSeries_df.loc[timeSeries_df.value_valeur>risk_th,"risk_flag"] = 1
+    timeSeries_df.loc[timeSeries_df["value"]>risk_th,"risk_flag"] = 1
 
     data_train = timeSeries_df[timeSeries_df.year.isin(train_year)]
     data_test = timeSeries_df[timeSeries_df.year.isin(test_year)]
