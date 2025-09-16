@@ -4,7 +4,7 @@ This is the official repository for the paper "Paralytic Shellfish Poisoning Ris
 
 ## Important Notice
 
-Due to data sharing agreements with the Canadian Food Inspection Agency (CFIA), we cannot provide the original dataset used in the paper. For demonstration purposes, we have created synthetic data based on the real data characteristics. **Please note that the synthetic data may not completely reflect the properties of the original data and may show different results than those reported in the paper.**
+Due to data sharing agreements with the Canadian Food Inspection Agency (CFIA), we cannot provide the original dataset used in the paper. For demonstration purposes, we have created synthetic data based on the real data characteristics. **Please note that the synthetic data may not completely reflect the properties of the original data and may show different results from those reported in the paper.**
 
 ## Project Structure
 
