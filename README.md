@@ -22,9 +22,9 @@ PSPRA/
 
 ## Environment Setup
 
-### Creating Python Environment
+You can set up the Python environment using either conda (recommended) or venv. Choose one of the methods below:
 
-We recommend using conda to create a dedicated environment for this project:
+### Method 1: Using Conda (Recommended)
 
 ```bash
 # Create a new conda environment
@@ -34,9 +34,30 @@ conda create -n pspra python=3.9
 conda activate pspra
 ```
 
+### Method 2: Using venv (Alternative)
+
+If you don't have conda installed or prefer using Python's built-in virtual environment:
+
+```bash
+# Create a new virtual environment
+python -m venv pspra_env
+
+# Activate the environment
+# On Windows:
+pspra_env\Scripts\activate
+
+# On macOS/Linux:
+source pspra_env/bin/activate
+```
+
+**Note**: Make sure you have Python 3.7 or higher installed. You can check your Python version with:
+```bash
+python --version
+```
+
 ### Installing Required Packages
 
-Install the necessary packages using pip:
+After activating your environment (either conda or venv), install the necessary packages using pip:
 
 ```bash
 # Core machine learning packages
@@ -52,11 +73,28 @@ pip install lightgbm xgboost catboost
 pip install joblib scipy
 ```
 
+Alternative installation using requirements.txt (if you create one):
+```bash
+pip install -r requirements.txt
+```
+
+### Deactivating the Environment
+
+When you're done working with the project:
+
+```bash
+# For conda:
+conda deactivate
+
+# For venv:
+deactivate
+```
+
 ## Usage
 
 ### Running the Training Script
 
-The main training script is `train.py` located in the `script/` directory. Navigate to the script directory before running:
+The main training script is `train.py` located in the `script/` directory. Make sure your environment is activated, then navigate to the script directory:
 
 ```bash
 cd script
