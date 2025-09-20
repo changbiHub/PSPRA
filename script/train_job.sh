@@ -3,8 +3,8 @@
 #SBATCH --job-name=pspra_train
 #SBATCH --output=logs/train_%j.out
 #SBATCH --error=logs/train_%j.err
-#SBATCH --time=02:00:00
-#SBATCH --cpus-per-task=4
+#SBATCH --time=12:00:00
+#SBATCH --cpus-per-task=8
 #SBATCH --mem=8G
 
 # Create logs directory if it doesn't exist
@@ -23,6 +23,7 @@ EXPERIMENT=${EXPERIMENT:-"p1"}
 MODEL_NAME=${MODEL_NAME:-"TCN"}
 RESULT_PATH=${RESULT_PATH:-"../results"}
 MODEL_SAVE_PATH=${MODEL_SAVE_PATH:-"../models"}
+MAX_GAP=${MAX_GAP:-21}
 OVERWRITE=${OVERWRITE:-""}
 
 # Change to script directory
@@ -31,9 +32,9 @@ source /home/changbi/scratch/PSPRA/.venv/bin/activate
 
 # Run the training script
 if [ -n "$OVERWRITE" ]; then
-    python train.py --experiment $EXPERIMENT --model_name $MODEL_NAME --result_path $RESULT_PATH --model_save_path $MODEL_SAVE_PATH --overwrite
+    python train.py --experiment $EXPERIMENT --model_name $MODEL_NAME --result_path $RESULT_PATH --model_save_path $MODEL_SAVE_PATH --data_path ../data_real --max_gap $MAX_GAP --overwrite
 else
-    python train.py --experiment $EXPERIMENT --model_name $MODEL_NAME --result_path $RESULT_PATH --model_save_path $MODEL_SAVE_PATH
+    python train.py --experiment $EXPERIMENT --model_name $MODEL_NAME --result_path $RESULT_PATH --model_save_path $MODEL_SAVE_PATH --data_path ../data_real --max_gap $MAX_GAP
 fi
 
-echo "Job completed for experiment: $EXPERIMENT, model: $MODEL_NAME"
+echo "Job completed for experiment: $EXPERIMENT, model: $MODEL_NAME, max_gap: $MAX_GAP"
