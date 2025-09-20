@@ -185,6 +185,63 @@ if model_name == "stacking_ensemble":
     y_pred_proba_train = model.predict_proba(X_train_flat)[:, 1]
     y_pred_train = model.predict(X_train_flat)
     
+    # Add end-to-end SHAP analysis after model training
+    import shap
+    
+    print("Computing end-to-end SHAP values for stacking ensemble...")
+    
+    try:
+        # Create a prediction function for SHAP
+        def model_predict_proba(X):
+            return model.predict_proba(X)[:, 1]  # Return probability of positive class
+        
+        # Use a subset of training data as background for faster computation
+        background_size = min(100, X_train_flat.shape[0])
+        background = X_train_flat[:background_size]
+        
+        # Use a subset of test data for explanation
+        explain_size = min(50, X_test_flat.shape[0])
+        explain_data = X_test_flat[:explain_size]
+        
+        # Create SHAP explainer treating the whole model as black box
+        explainer = shap.Explainer(model_predict_proba, background)
+        shap_values = explainer(explain_data)
+        
+        print(f"SHAP values computed for {explain_size} test samples")
+        
+        # Save SHAP results
+        shap_save_path = os.path.join(args.result_path, experiment, model_name, f"shap_end_to_end_{timestamp}_{identifier}.npz")
+        os.makedirs(os.path.dirname(shap_save_path), exist_ok=True)
+        
+        np.savez(shap_save_path,
+                shap_values=shap_values.values,
+                base_values=shap_values.base_values,
+                data=explain_data,
+                expected_value=explainer.expected_value)
+        
+        print(f"End-to-end SHAP values saved to {shap_save_path}")
+        
+    except Exception as e:
+        print(f"Could not compute end-to-end SHAP values: {e}")
+        
+        # Fallback: Try with KernelExplainer for more robust black-box explanation
+        try:
+            print("Trying KernelExplainer as fallback...")
+            explainer = shap.KernelExplainer(model_predict_proba, background[:20])  # Even smaller background
+            shap_values = explainer.shap_values(explain_data[:10])  # Smaller explanation set
+            
+            # Save fallback results
+            fallback_save_path = os.path.join(args.result_path, experiment, model_name, f"shap_kernel_{timestamp}_{identifier}.npz")
+            np.savez(fallback_save_path,
+                    shap_values=shap_values,
+                    data=explain_data[:10],
+                    expected_value=explainer.expected_value)
+            
+            print(f"Fallback SHAP values saved to {fallback_save_path}")
+            
+        except Exception as e2:
+            print(f"Fallback SHAP also failed: {e2}")
+
     # Save model
     if args.model_save_path is not None:
         if not args.overwrite:
