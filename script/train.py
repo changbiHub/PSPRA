@@ -105,8 +105,8 @@ else:
     data_train = timeSeries_df[timeSeries_df.year.isin(train_year)]
     data_test = timeSeries_df[timeSeries_df.year.isin(test_year)]
 
-    y_smoothed_train, target_train, history_train = preprocessor(data_train, mode='univariate')
-    y_smoothed_test, target_test, history_test = preprocessor(data_test, mode='univariate')
+    y_smoothed_train, target_train, history_train = preprocessor(data_train, max_gap=args.max_gap, mode='univariate')
+    y_smoothed_test, target_test, history_test = preprocessor(data_test, max_gap=args.max_gap, mode='univariate')
 
     X_train = y_smoothed_train
     y_train = target_train.risk_flag.values.astype(int)
