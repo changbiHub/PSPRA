@@ -1,4 +1,6 @@
 /data
+/data_real
+/logs
 /.venv
 /script/logs
 /script/__pycache__
@@ -7,3 +9,5 @@
 /models
 /results
 *.keras
+*.npz
+*.joblib

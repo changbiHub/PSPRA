@@ -19,6 +19,8 @@ parser.add_argument('--model_save_path', type=str, default=None,
                     help='Path to save trained models')
 parser.add_argument('--overwrite', action='store_true',
                     help='Whether to overwrite existing results')
+parser.add_argument('--max_gap', type=int, default=21,
+                    help='Maximum gap allowed in data preprocessing')
 args = parser.parse_args()
 experiment = args.experiment
 model_name = args.model_name
@@ -33,13 +35,13 @@ if args.data_path is None:
     args.data_path = os.path.join(script_path, "..", "data")
 
 timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
-
+identifier = np.random.randint(10000)
 # %%
 # Handle multivariate experiment (p3m)
 if experiment == "p3m":
     th_val = 80
     toxin_names = ['C-1', 'C-2', 'GTX-1', 'GTX-2', 'GTX-3', 'GTX-4','GTX-5', 'NEOSTX', 'STX', 'dcGTX-2', 'dcGTX-3', 'dcSTX']
-    multivariate_data_path = os.path.join(args.data_path, f"data_mutivariate.csv")
+    multivariate_data_path = os.path.join(args.data_path, f"data_multivariate.csv")
     df = pd.read_csv(multivariate_data_path)[["site","date","compound","value"]]
     df_pivot = pd.pivot_table(df,index=["site","date"],columns="compound",values="value").reset_index().dropna()
     df_pivot = phrase(df_pivot)
@@ -58,8 +60,8 @@ if experiment == "p3m":
     data_toxins_norm_train = data_toxins_norm.loc[train_idx]
     data_toxins_norm_test = data_toxins_norm.loc[test_idx]
     
-    history_ls_train, target_ls_train, TI_train = preprocessor(data_toxins_norm_train, mode='multivariate')
-    history_ls_test, target_ls_test, TI_test = preprocessor(data_toxins_norm_test, mode='multivariate')
+    history_ls_train, target_ls_train, TI_train = preprocessor(data_toxins_norm_train, max_gap=args.max_gap, mode='multivariate')
+    history_ls_test, target_ls_test, TI_test = preprocessor(data_toxins_norm_test, max_gap=args.max_gap, mode='multivariate')
     
     X_train = TI_train
     y_train = target_ls_train.risk_flag.values.astype(int)
@@ -148,25 +150,21 @@ if model_name == "stacking_ensemble":
         ('gbc', GradientBoostingClassifier()),
         ('rf', RandomForestClassifier()),
         ('lr', LogisticRegression(max_iter=1000)),
-        ('dt', DecisionTreeClassifier()),
         ('catboost', CatBoostClassifier(verbose=0)),
         ('ada', AdaBoostClassifier()),
         ('lda', LinearDiscriminantAnalysis()),
         ('et', ExtraTreesClassifier()),
         ('lgb', LGBMClassifier(verbose=-1)),
-        ('qda', QuadraticDiscriminantAnalysis()),
-        ('nb', GaussianNB()),
         ('xgb', XGBClassifier(use_label_encoder=False, eval_metric="logloss", verbosity=0)),
-        ('knn', KNeighborsClassifier()),
         ('tcn', Pipeline([
             ('reshape', ReshapeTransformer(time_steps=time_steps, num_features=num_features)),
             ('model', NNmodel(time_steps=time_steps, num_features=num_features, model_name="TCN", 
-                             best_model_filepath=f"temp_tcn_{timestamp}.keras"))
+                             best_model_filepath=f"temp_tcn_{timestamp}_{identifier}.keras"))
         ])),
         ('rnn', Pipeline([
             ('reshape', ReshapeTransformer(time_steps=time_steps, num_features=num_features)),
             ('model', NNmodel(time_steps=time_steps, num_features=num_features, model_name="RNN", 
-                             best_model_filepath=f"temp_rnn_{timestamp}.keras"))
+                             best_model_filepath=f"temp_rnn_{timestamp}_{identifier}.keras"))
         ]))
     ]
     
@@ -190,7 +188,7 @@ if model_name == "stacking_ensemble":
     # Save model
     if args.model_save_path is not None:
         if not args.overwrite:
-            save_path = os.path.join(args.model_save_path, experiment, model_name, f"model_{timestamp}.joblib")
+            save_path = os.path.join(args.model_save_path, experiment, model_name, f"model_{timestamp}_{identifier}.joblib")
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             joblib.dump(model, save_path)
             print(f"Stacking ensemble saved to {save_path}")
@@ -210,7 +208,7 @@ elif model_name in ["RNN","TCN"]:
     if args.model_save_path is not None:
         if not args.overwrite:
             os.makedirs(os.path.join(args.model_save_path, experiment, model_name), exist_ok=True)
-            model_save_filepath = os.path.join(args.model_save_path, experiment, model_name, f"best_model_{timestamp}.keras")
+            model_save_filepath = os.path.join(args.model_save_path, experiment, model_name, f"best_model_{timestamp}_{identifier}.keras")
         else:
             os.makedirs(args.model_save_path, exist_ok=True)
             model_save_filepath = os.path.join(args.model_save_path, experiment, model_name, f"best_model_{experiment}_{model_name}.keras")
@@ -292,7 +290,7 @@ elif model_name in ["GBC","RF","LR","DT","LR","catboost","ADA","LDA","ET","LGB",
     
     if args.model_save_path is not None:
         if not args.overwrite:
-            save_path = os.path.join(args.model_save_path, experiment, model_name,f"model_{timestamp}.joblib")
+            save_path = os.path.join(args.model_save_path, experiment, model_name,f"model_{timestamp}_{identifier}.joblib")
             os.makedirs(os.path.dirname(save_path), exist_ok=True)
             joblib.dump(model, save_path)
             print(f"Model saved to {save_path}")
@@ -308,7 +306,7 @@ auc = sklearn.metrics.roc_auc_score(y_test, y_pred_proba)
 print(f"AUC: {auc}")
 # Save results
 if not args.overwrite:
-    save_path = os.path.join(args.result_path, experiment, model_name,f"results_{timestamp}.npz")
+    save_path = os.path.join(args.result_path, experiment, model_name,f"results_{timestamp}_{identifier}.npz")
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     np.savez(save_path,
             X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test, y_pred_proba=y_pred_proba, y_pred=y_pred,y_pred_proba_train=y_pred_proba_train,y_pred_train=y_pred_train)
