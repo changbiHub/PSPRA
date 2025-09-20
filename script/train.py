@@ -159,12 +159,12 @@ if model_name == "stacking_ensemble":
         ('tcn', Pipeline([
             ('reshape', ReshapeTransformer(time_steps=time_steps, num_features=num_features)),
             ('model', NNmodel(time_steps=time_steps, num_features=num_features, model_name="TCN", 
-                             best_model_filepath=f"temp_tcn_{timestamp}_{identifier}.keras"))
+                             best_model_filepath=f"temp_model/temp_tcn_{timestamp}_{identifier}.keras"))
         ])),
         ('rnn', Pipeline([
             ('reshape', ReshapeTransformer(time_steps=time_steps, num_features=num_features)),
             ('model', NNmodel(time_steps=time_steps, num_features=num_features, model_name="RNN", 
-                             best_model_filepath=f"temp_rnn_{timestamp}_{identifier}.keras"))
+                             best_model_filepath=f"temp_model/temp_rnn_{timestamp}_{identifier}.keras"))
         ]))
     ]
     
