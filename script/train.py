@@ -21,6 +21,8 @@ parser.add_argument('--overwrite', action='store_true',
                     help='Whether to overwrite existing results')
 parser.add_argument('--max_gap', type=int, default=21,
                     help='Maximum gap allowed in data preprocessing')
+parser.add_argument('--deep_shap', action='store_true',
+                    help='Use whole training and test sets for SHAP computation (slower but more comprehensive)')
 args = parser.parse_args()
 experiment = args.experiment
 model_name = args.model_name
@@ -190,18 +192,37 @@ if model_name == "stacking_ensemble":
     
     print("Computing end-to-end SHAP values for stacking ensemble...")
     
+    # Extract feature order for metadata
+    if experiment == "p3m":
+        # Get the feature names from df_pivot (excluding non-toxin columns)
+        feature_columns = [col for col in df_pivot.columns if col not in ['site', 'date', 'year', 'PSP_total', 'risk_flag']]
+        feature_names = feature_columns  # These are the toxin names in order
+    else:
+        feature_names = ['PSP_value']  # For univariate experiments
+    
     try:
         # Create a prediction function for SHAP
         def model_predict_proba(X):
             return model.predict_proba(X)[:, 1]  # Return probability of positive class
         
-        # Use a subset of training data as background for faster computation
-        background_size = min(100, X_train_flat.shape[0])
-        background = X_train_flat[:background_size]
+        # Use different data sizes based on deep_shap argument
+        if args.deep_shap:
+            print("Using deep SHAP mode - full datasets (this may take a while...)")
+            background = X_train_flat
+            explain_data = X_test_flat
+            background_size = X_train_flat.shape[0]
+            explain_size = X_test_flat.shape[0]
+        else:
+            print("Using fast SHAP mode - data subsets")
+            # Use a subset of training data as background for faster computation
+            background_size = min(100, X_train_flat.shape[0])
+            background = X_train_flat[:background_size]
+            
+            # Use a subset of test data for explanation
+            explain_size = min(50, X_test_flat.shape[0])
+            explain_data = X_test_flat[:explain_size]
         
-        # Use a subset of test data for explanation
-        explain_size = min(50, X_test_flat.shape[0])
-        explain_data = X_test_flat[:explain_size]
+        print(f"Background size: {background_size}, Explanation size: {explain_size}")
         
         # Create SHAP explainer treating the whole model as black box
         explainer = shap.Explainer(model_predict_proba, background)
@@ -209,17 +230,38 @@ if model_name == "stacking_ensemble":
         
         print(f"SHAP values computed for {explain_size} test samples")
         
-        # Save SHAP results
-        shap_save_path = os.path.join(args.result_path, experiment, model_name, f"shap_end_to_end_{timestamp}_{identifier}.npz")
+        # Restore original shape for p3m experiment
+        if experiment == "p3m":
+            # Reshape SHAP values back to original 3D shape
+            shap_values_reshaped = shap_values.values.reshape(-1, time_steps, num_features)
+            explain_data_reshaped = explain_data.reshape(-1, time_steps, num_features)
+        else:
+            shap_values_reshaped = shap_values.values
+            explain_data_reshaped = explain_data
+        
+        # Save SHAP results with feature metadata
+        shap_filename = f"shap_deep_{timestamp}_{identifier}.npz" if args.deep_shap else f"shap_fast_{timestamp}_{identifier}.npz"
+        shap_save_path = os.path.join(args.result_path, experiment, model_name, shap_filename)
         os.makedirs(os.path.dirname(shap_save_path), exist_ok=True)
         
         np.savez(shap_save_path,
-                shap_values=shap_values.values,
+                shap_values=shap_values.values,  # Keep flattened for model compatibility
+                shap_values_reshaped=shap_values_reshaped,  # Original shape
                 base_values=shap_values.base_values,
-                data=explain_data,
-                expected_value=explainer.expected_value)
+                data=explain_data,  # Keep flattened
+                data_reshaped=explain_data_reshaped,  # Original shape
+                expected_value=explainer.expected_value,
+                time_steps=time_steps,
+                num_features=num_features,
+                feature_names=feature_names,  # Feature order from df_pivot
+                experiment=experiment,  # Experiment type for reference
+                deep_shap=args.deep_shap,  # Flag indicating computation mode
+                background_size=background_size,
+                explain_size=explain_size)
         
         print(f"End-to-end SHAP values saved to {shap_save_path}")
+        print(f"Feature order: {feature_names}")
+        print(f"Deep SHAP mode: {args.deep_shap}")
         
     except Exception as e:
         print(f"Could not compute end-to-end SHAP values: {e}")
@@ -227,17 +269,42 @@ if model_name == "stacking_ensemble":
         # Fallback: Try with KernelExplainer for more robust black-box explanation
         try:
             print("Trying KernelExplainer as fallback...")
-            explainer = shap.KernelExplainer(model_predict_proba, background[:20])  # Even smaller background
-            shap_values = explainer.shap_values(explain_data[:10])  # Smaller explanation set
             
-            # Save fallback results
-            fallback_save_path = os.path.join(args.result_path, experiment, model_name, f"shap_kernel_{timestamp}_{identifier}.npz")
+            # Use smaller datasets for fallback regardless of deep_shap setting
+            fallback_background = X_train_flat[:20] if not args.deep_shap else X_train_flat[:100]
+            fallback_explain = explain_data[:10] if not args.deep_shap else explain_data[:50]
+            
+            explainer = shap.KernelExplainer(model_predict_proba, fallback_background)
+            shap_values = explainer.shap_values(fallback_explain)
+            
+            # Restore original shape for fallback too
+            if experiment == "p3m":
+                shap_values_reshaped = shap_values.reshape(-1, time_steps, num_features)
+                explain_data_reshaped = fallback_explain.reshape(-1, time_steps, num_features)
+            else:
+                shap_values_reshaped = shap_values
+                explain_data_reshaped = fallback_explain
+            
+            # Save fallback results with feature metadata
+            fallback_filename = f"shap_kernel_deep_{timestamp}_{identifier}.npz" if args.deep_shap else f"shap_kernel_fast_{timestamp}_{identifier}.npz"
+            fallback_save_path = os.path.join(args.result_path, experiment, model_name, fallback_filename)
             np.savez(fallback_save_path,
-                    shap_values=shap_values,
-                    data=explain_data[:10],
-                    expected_value=explainer.expected_value)
+                    shap_values=shap_values,  # Keep flattened
+                    shap_values_reshaped=shap_values_reshaped,  # Original shape
+                    data=fallback_explain,  # Keep flattened
+                    data_reshaped=explain_data_reshaped,  # Original shape
+                    expected_value=explainer.expected_value,
+                    time_steps=time_steps,
+                    num_features=num_features,
+                    feature_names=feature_names,  # Feature order from df_pivot
+                    experiment=experiment,  # Experiment type for reference
+                    deep_shap=args.deep_shap,  # Flag indicating computation mode
+                    background_size=len(fallback_background),
+                    explain_size=len(fallback_explain))
             
             print(f"Fallback SHAP values saved to {fallback_save_path}")
+            print(f"Feature order: {feature_names}")
+            print(f"Deep SHAP mode: {args.deep_shap}")
             
         except Exception as e2:
             print(f"Fallback SHAP also failed: {e2}")
